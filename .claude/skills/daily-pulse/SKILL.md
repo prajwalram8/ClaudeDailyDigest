@@ -42,6 +42,11 @@ List `digests/` and open the single most recent dated file (sorted by filename, 
 
 If `digests/` is empty (first run), skip this step — there is nothing to compare against.
 
+Also check `feedback/log.md` for entries logged since the last run. Most feedback is resolved by
+editing this file directly (see the `daily-pulse-feedback` skill) — you don't need to re-derive
+anything from the log itself. It's listed here only as a sanity check that nothing pending was
+missed.
+
 ## Step 3 — Search each pillar
 
 Use web search for each query below, using today's real date in the search. If a query returns
@@ -142,3 +147,19 @@ git push -u origin main
 If push fails on a network error, retry up to 4 times with exponential backoff (2s, 4s, 8s,
 16s). This repo pushes daily pulse files directly to `main` — no PR needed for these routine
 data commits.
+
+## Step 9 — Email the digest
+
+Send today's digest by email using the Gmail `send_message` tool:
+
+- To: prajwalram8@gmail.com
+- Subject: `DAILY PULSE — YYYY-MM-DD`
+- Body: the full digest text exactly as written in Step 5 (plain text, no reformatting), followed
+  by a blank line and `Full archive: https://github.com/prajwalram8/ClaudeDailyDigest/tree/main/digests`
+- Also add one line inviting feedback: `Missed something? Just reply to this thread or paste the
+  link(s) into a Claude Code session on this repo — see feedback/log.md.`
+
+Do this after the push in Step 8 succeeds, not before — the committed file is the source of
+truth; the email is a convenience copy. If the Gmail tool is unavailable in this session (no
+Gmail connector granted), skip this step and note it in your final summary rather than failing
+the whole run — the digest is still saved and pushed either way.
