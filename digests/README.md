@@ -11,3 +11,4 @@ synthesis lives in the separate weekly digest, not here.
 
 | Date | Lookback | Pillars with material items | Carry-forward count |
 |------|----------|------------------------------|----------------------|
+| 2026-08-18 | 72h (first run) | Maritime & shipping, Gulf infrastructure, Trade & economic, Geopolitical & security, Industry & strategic moves, South Asia corridors, Portfolio-specific, UAE free zone competitors | 5 |
