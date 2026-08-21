@@ -14,3 +14,4 @@ synthesis lives in the separate weekly digest, not here.
 | 2026-08-18 | 72h (first run) | Maritime & shipping, Gulf infrastructure, Trade & economic, Geopolitical & security, Industry & strategic moves, South Asia corridors, Portfolio-specific, UAE free zone competitors | 5 |
 | 2026-08-19 | 24h | Maritime & shipping, Gulf infrastructure, Geopolitical & security, Industry & strategic moves, South Asia corridors, Portfolio-specific | 5 |
 | 2026-08-20 | 24h | Maritime & shipping, Gulf infrastructure, Geopolitical & security, Portfolio-specific | 5 |
+| 2026-08-21 | 24h | Maritime & shipping, Portfolio-specific | 5 |
