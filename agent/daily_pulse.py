@@ -13,12 +13,24 @@ behavior too — there's one source of truth for the pillars, queries, and
 materiality bar, not two copies that can drift apart.
 
 Environment variables:
-    ANTHROPIC_API_KEY   required — Claude API key.
-    GMAIL_ADDRESS        Gmail address to send from (app-password auth).
-    GMAIL_APP_PASSWORD   Gmail app password (not your regular password).
-    DIGEST_RECIPIENT     Recipient address; defaults to GMAIL_ADDRESS.
-    DAILY_PULSE_MODEL    Claude model id; defaults to claude-sonnet-5.
-    DAILY_PULSE_MAX_SEARCHES  Cap on web searches per run; defaults to 40.
+    LLM_PROVIDER         "anthropic" (default) or "openai" — which API to use.
+
+    Anthropic path:
+        ANTHROPIC_API_KEY   required if LLM_PROVIDER=anthropic.
+        DAILY_PULSE_MODEL   Claude model id; defaults to claude-sonnet-5.
+        DAILY_PULSE_MAX_SEARCHES  Cap on web searches per run; defaults to 40.
+
+    OpenAI path:
+        OPENAI_API_KEY      required if LLM_PROVIDER=openai.
+        DAILY_PULSE_MODEL   OpenAI model id; defaults to gpt-5.6.
+            (Must be a model that supports the Responses API "web_search"
+            tool — check developers.openai.com/api/docs/guides/tools-web-search
+            if this default has since been superseded.)
+
+    Shared:
+        GMAIL_ADDRESS        Gmail address to send from (app-password auth).
+        GMAIL_APP_PASSWORD   Gmail app password (not your regular password).
+        DIGEST_RECIPIENT     Recipient address; defaults to GMAIL_ADDRESS.
 """
 from __future__ import annotations
 
@@ -32,14 +44,14 @@ from datetime import datetime, timezone
 from email.mime.text import MIMEText
 from pathlib import Path
 
-import anthropic
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILL_PATH = REPO_ROOT / ".claude" / "skills" / "daily-pulse" / "SKILL.md"
 DIGESTS_DIR = REPO_ROOT / "digests"
 FEEDBACK_LOG = REPO_ROOT / "feedback" / "log.md"
 
-MODEL = os.environ.get("DAILY_PULSE_MODEL", "claude-sonnet-5")
+PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic").strip().lower()
+DEFAULT_MODELS = {"anthropic": "claude-sonnet-5", "openai": "gpt-5.6"}
+MODEL = os.environ.get("DAILY_PULSE_MODEL", DEFAULT_MODELS.get(PROVIDER, ""))
 MAX_SEARCHES = int(os.environ.get("DAILY_PULSE_MAX_SEARCHES", "40"))
 
 # Must match the pillar headings in SKILL.md exactly — used to parse the
@@ -83,17 +95,13 @@ def determine_lookback(today: datetime, is_first_run: bool) -> str:
     return "24h"
 
 
-def run_digest(
+def build_context(
     today: datetime,
     lookback: str,
     prev_date: str | None,
     prev_digest: str | None,
     feedback: str,
 ) -> str:
-    client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
-
-    system_prompt = load_skill_instructions()
-
     context_parts = [
         f"Today's real date is {today.strftime('%Y-%m-%d')} ({today.strftime('%A')}).",
         f"Lookback window for this run: {lookback}.",
@@ -116,7 +124,13 @@ def run_digest(
         "Steps 6-9 yourself (saving, indexing, committing, emailing are "
         "handled by the calling script)."
     )
+    return "\n\n".join(context_parts)
 
+
+def run_digest_anthropic(system_prompt: str, user_context: str) -> str:
+    import anthropic
+
+    client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
     response = client.messages.create(
         model=MODEL,
         max_tokens=4096,
@@ -128,11 +142,44 @@ def run_digest(
                 "max_uses": MAX_SEARCHES,
             }
         ],
-        messages=[{"role": "user", "content": "\n\n".join(context_parts)}],
+        messages=[{"role": "user", "content": user_context}],
     )
-
     text_blocks = [block.text for block in response.content if block.type == "text"]
-    digest = "\n".join(text_blocks).strip()
+    return "\n".join(text_blocks).strip()
+
+
+def run_digest_openai(system_prompt: str, user_context: str) -> str:
+    import openai
+
+    client = openai.OpenAI()  # reads OPENAI_API_KEY from env
+    response = client.responses.create(
+        model=MODEL,
+        instructions=system_prompt,
+        tools=[{"type": "web_search"}],
+        input=user_context,
+    )
+    return response.output_text.strip()
+
+
+def run_digest(
+    today: datetime,
+    lookback: str,
+    prev_date: str | None,
+    prev_digest: str | None,
+    feedback: str,
+) -> str:
+    system_prompt = load_skill_instructions()
+    user_context = build_context(today, lookback, prev_date, prev_digest, feedback)
+
+    if PROVIDER == "anthropic":
+        digest = run_digest_anthropic(system_prompt, user_context)
+    elif PROVIDER == "openai":
+        digest = run_digest_openai(system_prompt, user_context)
+    else:
+        raise RuntimeError(
+            f"Unknown LLM_PROVIDER={PROVIDER!r} — expected 'anthropic' or 'openai'"
+        )
+
     if not digest.startswith("DAILY PULSE"):
         raise RuntimeError(
             f"Unexpected model output — did not start with 'DAILY PULSE':\n{digest[:500]}"
@@ -245,7 +292,7 @@ def main() -> int:
 
     print(
         f"Running daily pulse for {date_str} "
-        f"(lookback={lookback}, first_run={is_first_run})"
+        f"(provider={PROVIDER}, model={MODEL}, lookback={lookback}, first_run={is_first_run})"
     )
     digest = run_digest(today, lookback, prev_date, prev_digest, feedback)
 

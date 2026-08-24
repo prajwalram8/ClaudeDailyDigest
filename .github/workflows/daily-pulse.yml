@@ -25,7 +25,9 @@ jobs:
 
       - name: Run daily pulse
         env:
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER }} # "anthropic" (default) or "openai"
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           DIGEST_RECIPIENT: ${{ secrets.DIGEST_RECIPIENT }}

@@ -10,8 +10,9 @@ and this agent picks up the change on its next run.
 
 1. Computes today's date and the lookback window (24h, or 72h on Monday / first run).
 2. Reads the most recent file in `digests/` and `feedback/log.md` for context.
-3. Calls the Claude API with its built-in `web_search` tool, using SKILL.md as the
-   system prompt, to research each pillar and write the digest.
+3. Calls Claude or OpenAI (your choice — see below) with its built-in web search
+   tool, using SKILL.md as the system prompt, to research each pillar and write
+   the digest.
 4. Saves `digests/YYYY-MM-DD.md`, updates the index in `digests/README.md`.
 5. Commits and pushes directly to `main`.
 6. Emails the digest via Gmail SMTP, if credentials are configured.
@@ -19,14 +20,32 @@ and this agent picks up the change on its next run.
 If the file for today already exists, the script exits immediately — safe to
 trigger more than once a day.
 
+## Choosing a provider
+
+Set the `LLM_PROVIDER` repo **variable** (not secret — it's not sensitive) to
+`anthropic` (default) or `openai`. Whichever you pick, only that provider's API
+key needs to be set; the other can be left out entirely.
+
 ## One-time setup
 
-### 1. Anthropic API key
+### 1. LLM API key
 
-Get a key from [console.anthropic.com](https://console.anthropic.com/settings/keys).
-This is billed separately from any Claude subscription — a daily run (a few dozen
-searches plus one synthesis call) costs a small fraction of a cent to a few cents
-per day depending on model choice.
+**Anthropic** (default): get a key from
+[console.anthropic.com](https://console.anthropic.com/settings/keys), add it as
+the `ANTHROPIC_API_KEY` secret.
+
+**OpenAI**: get a key from
+[platform.openai.com/api-keys](https://platform.openai.com/api-keys), add it as
+the `OPENAI_API_KEY` secret, and set the `LLM_PROVIDER` repo variable to
+`openai`. This path uses the Responses API's built-in `web_search` tool (model
+must support it — the default is `gpt-5.6`; check
+[developers.openai.com/api/docs/guides/tools-web-search](https://developers.openai.com/api/docs/guides/tools-web-search)
+if that default has since changed).
+
+Either way, this is billed separately from any existing subscription with that
+provider — a daily run (a few dozen searches plus one synthesis call) costs a
+small fraction of a cent to a few cents per day depending on model choice, but
+it's real spend on your card.
 
 ### 2. Gmail app password (optional — only needed for email delivery)
 
@@ -40,16 +59,21 @@ per day depending on model choice.
 If you skip this, the script just logs "Gmail credentials not set — skipping
 email" and still completes the save/commit/push.
 
-### 3. Add repo secrets
+### 3. Add repo secrets and variable
 
-In this repo: **Settings → Secrets and variables → Actions → New repository secret**.
+Secrets: **Settings → Secrets and variables → Actions → Secrets tab → New repository secret**.
 
 | Secret | Required | Value |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | yes | your Anthropic API key |
+| `ANTHROPIC_API_KEY` | if using Anthropic (default) | your Anthropic API key |
+| `OPENAI_API_KEY` | if using OpenAI | your OpenAI API key |
 | `GMAIL_ADDRESS` | for email | the Gmail address to send from |
 | `GMAIL_APP_PASSWORD` | for email | the 16-character app password from step 2 |
 | `DIGEST_RECIPIENT` | no | recipient address; defaults to `GMAIL_ADDRESS` if unset |
+
+Variable (only needed to switch to OpenAI): **Settings → Secrets and variables →
+Actions → Variables tab → New repository variable** — name `LLM_PROVIDER`, value
+`openai`. Leave it unset to use the Anthropic default.
 
 No GitHub token needs adding — the workflow's built-in `GITHUB_TOKEN` already has
 push access to this repo via the `permissions: contents: write` block in the
@@ -66,7 +90,7 @@ file appeared in `digests/`.
 ```bash
 cd agent
 pip install -r requirements.txt
-export ANTHROPIC_API_KEY=...
+export ANTHROPIC_API_KEY=...    # or: export LLM_PROVIDER=openai; export OPENAI_API_KEY=...
 export GMAIL_ADDRESS=...        # optional
 export GMAIL_APP_PASSWORD=...   # optional
 python daily_pulse.py
