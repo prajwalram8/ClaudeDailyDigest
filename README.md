@@ -17,6 +17,9 @@ genuinely new, material developments since the previous run.
   `main`, and emails the digest.
 - **`.claude/skills/daily-pulse-feedback/SKILL.md`** + **`feedback/log.md`** — a self-improvement
   loop for missed items (see below).
+- **`agent/`** — a standalone Python version of the same skill, running on its own GitHub
+  Actions schedule instead of inside a Claude Code session. See `agent/README.md` for setup.
+  While both are enabled, only run one at a time long-term (see that README).
 
 ## Running it manually
 
