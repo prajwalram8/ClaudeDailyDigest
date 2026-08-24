@@ -17,3 +17,4 @@ synthesis lives in the separate weekly digest, not here.
 | 2026-08-21 | 24h | Maritime & shipping, Portfolio-specific | 5 |
 | 2026-08-22 | 24h | Maritime & shipping, Geopolitical & security, Industry & strategic moves | 5 |
 | 2026-08-23 | 24h | Maritime & shipping, Trade & economic, Geopolitical & security | 5 |
+| 2026-08-24 | 72h (Monday) | Trade & economic, Geopolitical & security | 5 |
