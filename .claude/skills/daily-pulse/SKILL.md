@@ -20,6 +20,23 @@ who already read yesterday's pulse — don't re-explain background they already 
 
 ---
 
+## Step 0 — Check whether the Python agent already ran today
+
+This repo has a standalone Python agent (`agent/daily_pulse.py`, see `agent/README.md`) that
+runs this same skill via GitHub Actions and is the **primary** way this digest gets produced.
+This Claude Code skill/Routine is the **fallback** — it only does real work if the Python agent
+hasn't been configured or its run failed for some reason.
+
+Before doing anything else: check whether `digests/YYYY-MM-DD.md` for today already exists
+(`git pull origin main` first, in case the Python agent's push hasn't been fetched locally yet).
+
+- **If it exists**: the Python agent already succeeded today. Stop here — do not search, do not
+  write a new digest, do not commit, do not email. Just report in one line that today's digest
+  already exists and no action was needed.
+- **If it does not exist**: proceed with the full run below as the fallback. This covers the
+  Python agent not being configured yet (no API key secrets), a failed run, GitHub Actions being
+  down, or anything else that left today without a digest.
+
 ## Step 1 — Determine run mode and date
 
 Work out today's actual date (do not assume what "recent" means — check it).
