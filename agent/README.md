@@ -10,9 +10,9 @@ and this agent picks up the change on its next run.
 
 1. Computes today's date and the lookback window (24h, or 72h on Monday / first run).
 2. Reads the most recent file in `digests/` and `feedback/log.md` for context.
-3. Calls Claude or OpenAI (your choice — see below) with its built-in web search
-   tool, using SKILL.md as the system prompt, to research each pillar and write
-   the digest.
+3. Calls Claude, OpenAI, or OpenRouter (your choice — see below) with web search
+   enabled, using SKILL.md as the system prompt, to research each pillar and
+   write the digest.
 4. Saves `digests/YYYY-MM-DD.md`, updates the index in `digests/README.md`.
 5. Commits and pushes directly to `main`.
 6. Emails the digest via Gmail SMTP, if credentials are configured.
@@ -23,8 +23,8 @@ trigger more than once a day.
 ## Choosing a provider
 
 Set the `LLM_PROVIDER` repo **variable** (not secret — it's not sensitive) to
-`anthropic` (default) or `openai`. Whichever you pick, only that provider's API
-key needs to be set; the other can be left out entirely.
+`anthropic` (default), `openai`, or `openrouter`. Whichever you pick, only that
+provider's API key needs to be set; the others can be left out entirely.
 
 ## One-time setup
 
@@ -42,10 +42,30 @@ must support it — the default is `gpt-5.6`; check
 [developers.openai.com/api/docs/guides/tools-web-search](https://developers.openai.com/api/docs/guides/tools-web-search)
 if that default has since changed).
 
-Either way, this is billed separately from any existing subscription with that
-provider — a daily run (a few dozen searches plus one synthesis call) costs a
-small fraction of a cent to a few cents per day depending on model choice, but
-it's real spend on your card.
+**OpenRouter**: get a key from
+[openrouter.ai/keys](https://openrouter.ai/keys), add it as the
+`OPENROUTER_API_KEY` secret, and set the `LLM_PROVIDER` repo variable to
+`openrouter`. Default model is `nvidia/nemotron-3-ultra-550b-a55b:free` —
+token usage on this model is free, **but web search is not**: it's enabled via
+OpenRouter's "web" plugin, billed per search (roughly $0.005–$0.015 each
+depending on the backend engine OpenRouter routes to) regardless of whether
+the underlying model is a free one. At ~30-40 searches per run that's on the
+order of $0.20–$0.50/day. Your OpenRouter account needs a funded balance (add
+credit at [openrouter.ai/credits](https://openrouter.ai/credits)) for this to
+work at all — a $0 free-tier account can call the free model but web search
+calls will fail. Check
+[openrouter.ai/docs/guides/features/plugins/web-search](https://openrouter.ai/docs/guides/features/plugins/web-search)
+if the plugin syntax has since changed (OpenRouter has been migrating this
+from a `plugins` parameter to an `openrouter:web_search` tool type).
+
+Whichever provider you use, this is billed separately from any existing
+subscription — real spend on your card, even where token costs are zero.
+
+**Never paste an API key into a chat conversation with Claude (or any
+assistant) to "hand it over" — always add it directly as a GitHub repo
+secret** (see step 3). A key typed into chat can end up logged in the
+conversation history; a key added as a secret is encrypted and never
+displayed back to you or to Claude after you save it.
 
 ### 2. Gmail app password (optional — only needed for email delivery)
 
@@ -67,13 +87,15 @@ Secrets: **Settings → Secrets and variables → Actions → Secrets tab → Ne
 |---|---|---|
 | `ANTHROPIC_API_KEY` | if using Anthropic (default) | your Anthropic API key |
 | `OPENAI_API_KEY` | if using OpenAI | your OpenAI API key |
+| `OPENROUTER_API_KEY` | if using OpenRouter | your OpenRouter API key |
 | `GMAIL_ADDRESS` | for email | the Gmail address to send from |
 | `GMAIL_APP_PASSWORD` | for email | the 16-character app password from step 2 |
 | `DIGEST_RECIPIENT` | no | recipient address; defaults to `GMAIL_ADDRESS` if unset |
 
-Variable (only needed to switch to OpenAI): **Settings → Secrets and variables →
-Actions → Variables tab → New repository variable** — name `LLM_PROVIDER`, value
-`openai`. Leave it unset to use the Anthropic default.
+Variable (only needed to switch away from Anthropic): **Settings → Secrets and
+variables → Actions → Variables tab → New repository variable** — name
+`LLM_PROVIDER`, value `openai` or `openrouter`. Leave it unset to use the
+Anthropic default.
 
 No GitHub token needs adding — the workflow's built-in `GITHUB_TOKEN` already has
 push access to this repo via the `permissions: contents: write` block in the
@@ -90,7 +112,8 @@ file appeared in `digests/`.
 ```bash
 cd agent
 pip install -r requirements.txt
-export ANTHROPIC_API_KEY=...    # or: export LLM_PROVIDER=openai; export OPENAI_API_KEY=...
+export ANTHROPIC_API_KEY=...    # or LLM_PROVIDER=openai + OPENAI_API_KEY=...
+                                 # or LLM_PROVIDER=openrouter + OPENROUTER_API_KEY=...
 export GMAIL_ADDRESS=...        # optional
 export GMAIL_APP_PASSWORD=...   # optional
 python daily_pulse.py

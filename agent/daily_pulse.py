@@ -13,7 +13,7 @@ behavior too — there's one source of truth for the pillars, queries, and
 materiality bar, not two copies that can drift apart.
 
 Environment variables:
-    LLM_PROVIDER         "anthropic" (default) or "openai" — which API to use.
+    LLM_PROVIDER   "anthropic" (default), "openai", or "openrouter" — which API to use.
 
     Anthropic path:
         ANTHROPIC_API_KEY   required if LLM_PROVIDER=anthropic.
@@ -26,6 +26,19 @@ Environment variables:
             (Must be a model that supports the Responses API "web_search"
             tool — check developers.openai.com/api/docs/guides/tools-web-search
             if this default has since been superseded.)
+
+    OpenRouter path:
+        OPENROUTER_API_KEY  required if LLM_PROVIDER=openrouter.
+        DAILY_PULSE_MODEL   OpenRouter model slug; defaults to
+            nvidia/nemotron-3-ultra-550b-a55b:free. Web search is enabled via
+            OpenRouter's "web" plugin, which is billed per search even on a
+            free model (check openrouter.ai/docs/guides/features/plugins/
+            web-search for current syntax/pricing if this has changed) — the
+            OpenRouter account needs a funded balance for this to work, the
+            model being free only covers token costs, not search costs.
+        DAILY_PULSE_MAX_SEARCHES  Max results per search call; defaults to 40
+            (passed as the plugin's max_results, not a call-count cap — the
+            model may still trigger multiple searches per run).
 
     Shared:
         GMAIL_ADDRESS        Gmail address to send from (app-password auth).
@@ -50,7 +63,11 @@ DIGESTS_DIR = REPO_ROOT / "digests"
 FEEDBACK_LOG = REPO_ROOT / "feedback" / "log.md"
 
 PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic").strip().lower()
-DEFAULT_MODELS = {"anthropic": "claude-sonnet-5", "openai": "gpt-5.6"}
+DEFAULT_MODELS = {
+    "anthropic": "claude-sonnet-5",
+    "openai": "gpt-5.6",
+    "openrouter": "nvidia/nemotron-3-ultra-550b-a55b:free",
+}
 MODEL = os.environ.get("DAILY_PULSE_MODEL", DEFAULT_MODELS.get(PROVIDER, ""))
 MAX_SEARCHES = int(os.environ.get("DAILY_PULSE_MAX_SEARCHES", "40"))
 
@@ -161,6 +178,29 @@ def run_digest_openai(system_prompt: str, user_context: str) -> str:
     return response.output_text.strip()
 
 
+def run_digest_openrouter(system_prompt: str, user_context: str) -> str:
+    import openai
+
+    client = openai.OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=os.environ["OPENROUTER_API_KEY"],
+    )
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_context},
+        ],
+        # OpenRouter's web-search plugin — billed per search even on a free
+        # model. See the OPENROUTER_API_KEY note in the module docstring if
+        # this stops working; OpenRouter has been migrating this from a
+        # "plugins" parameter to an "openrouter:web_search" tool type.
+        extra_body={"plugins": [{"id": "web", "max_results": MAX_SEARCHES}]},
+    )
+    content = response.choices[0].message.content
+    return (content or "").strip()
+
+
 def run_digest(
     today: datetime,
     lookback: str,
@@ -175,9 +215,12 @@ def run_digest(
         digest = run_digest_anthropic(system_prompt, user_context)
     elif PROVIDER == "openai":
         digest = run_digest_openai(system_prompt, user_context)
+    elif PROVIDER == "openrouter":
+        digest = run_digest_openrouter(system_prompt, user_context)
     else:
         raise RuntimeError(
-            f"Unknown LLM_PROVIDER={PROVIDER!r} — expected 'anthropic' or 'openai'"
+            f"Unknown LLM_PROVIDER={PROVIDER!r} — expected 'anthropic', 'openai', "
+            f"or 'openrouter'"
         )
 
     if not digest.startswith("DAILY PULSE"):
