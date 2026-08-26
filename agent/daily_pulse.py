@@ -13,22 +13,32 @@ behavior too — there's one source of truth for the pillars, queries, and
 materiality bar, not two copies that can drift apart.
 
 Environment variables:
-    LLM_PROVIDER   "anthropic" (default), "openai", or "openrouter" — which API to use.
+    LLM_PROVIDER   Force a specific provider: "openai", "anthropic", or
+        "openrouter". Normally left UNSET — see auto-selection below.
 
-    Anthropic path:
-        ANTHROPIC_API_KEY   required if LLM_PROVIDER=anthropic.
-        DAILY_PULSE_MODEL   Claude model id; defaults to claude-sonnet-5.
-        DAILY_PULSE_MAX_SEARCHES  Cap on web searches per run; defaults to 40.
+    Auto-selection (when LLM_PROVIDER is unset):
+        1. OpenAI, if OPENAI_API_KEY is set — this is the primary/default path.
+        2. Otherwise Anthropic, if ANTHROPIC_API_KEY is set — automatic
+           fallback to "the old way" this agent originally worked, so a
+           missing OpenAI key doesn't just break the run.
+        3. Otherwise OpenAI again, so the resulting error names the actual
+           missing key (OPENAI_API_KEY) rather than a misleading one.
 
-    OpenAI path:
-        OPENAI_API_KEY      required if LLM_PROVIDER=openai.
+    OpenAI path (primary/default):
+        OPENAI_API_KEY      required.
         DAILY_PULSE_MODEL   OpenAI model id; defaults to gpt-5.6.
             (Must be a model that supports the Responses API "web_search"
             tool — check developers.openai.com/api/docs/guides/tools-web-search
             if this default has since been superseded.)
 
-    OpenRouter path:
-        OPENROUTER_API_KEY  required if LLM_PROVIDER=openrouter.
+    Anthropic path (automatic fallback if no OpenAI key):
+        ANTHROPIC_API_KEY   required.
+        DAILY_PULSE_MODEL   Claude model id; defaults to claude-sonnet-5.
+        DAILY_PULSE_MAX_SEARCHES  Cap on web searches per run; defaults to 40.
+
+    OpenRouter path (opt-in only — never auto-selected, must set
+    LLM_PROVIDER=openrouter explicitly):
+        OPENROUTER_API_KEY  required.
         DAILY_PULSE_MODEL   OpenRouter model slug; defaults to
             nvidia/nemotron-3-ultra-550b-a55b:free. Web search is enabled via
             OpenRouter's "web" plugin, which is billed per search even on a
@@ -62,7 +72,24 @@ SKILL_PATH = REPO_ROOT / ".claude" / "skills" / "daily-pulse" / "SKILL.md"
 DIGESTS_DIR = REPO_ROOT / "digests"
 FEEDBACK_LOG = REPO_ROOT / "feedback" / "log.md"
 
-PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic").strip().lower()
+def resolve_provider() -> str:
+    """OpenAI is primary; fall back to Anthropic ("the old way") only if no
+    OpenAI key is configured. LLM_PROVIDER, if set, always wins outright —
+    that's the only way to opt into openrouter, and also how to force
+    Anthropic even when an OpenAI key happens to be present.
+    """
+    explicit = os.environ.get("LLM_PROVIDER", "").strip().lower()
+    if explicit:
+        return explicit
+    if os.environ.get("OPENAI_API_KEY"):
+        return "openai"
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        print("No OPENAI_API_KEY set — falling back to Anthropic.")
+        return "anthropic"
+    return "openai"  # no keys at all; fail with the primary provider's error
+
+
+PROVIDER = resolve_provider()
 DEFAULT_MODELS = {
     "anthropic": "claude-sonnet-5",
     "openai": "gpt-5.6",

@@ -10,9 +10,10 @@ and this agent picks up the change on its next run.
 
 1. Computes today's date and the lookback window (24h, or 72h on Monday / first run).
 2. Reads the most recent file in `digests/` and `feedback/log.md` for context.
-3. Calls Claude, OpenAI, or OpenRouter (your choice — see below) with web search
-   enabled, using SKILL.md as the system prompt, to research each pillar and
-   write the digest.
+3. Calls OpenAI (primary), automatically falling back to Anthropic if no
+   OpenAI key is configured — or OpenRouter, if explicitly opted into (see
+   below) — with web search enabled, using SKILL.md as the system prompt, to
+   research each pillar and write the digest.
 4. Saves `digests/YYYY-MM-DD.md`, updates the index in `digests/README.md`.
 5. Commits and pushes directly to `main`.
 6. Emails the digest via Gmail SMTP, if credentials are configured.
@@ -22,30 +23,43 @@ trigger more than once a day.
 
 ## Choosing a provider
 
-Set the `LLM_PROVIDER` repo **variable** (not secret — it's not sensitive) to
-`anthropic` (default), `openai`, or `openrouter`. Whichever you pick, only that
-provider's API key needs to be set; the others can be left out entirely.
+Leave `LLM_PROVIDER` unset (recommended) and the script auto-selects:
+
+1. **OpenAI**, if `OPENAI_API_KEY` is set — this is the primary path.
+2. Otherwise **Anthropic**, if `ANTHROPIC_API_KEY` is set — an automatic
+   fallback to how this agent originally worked, so a missing OpenAI key
+   doesn't just break the run.
+
+Set the `LLM_PROVIDER` repo **variable** (not secret — it's not sensitive) only
+to override this: `openai`, `anthropic`, or `openrouter`. `openrouter` is
+opt-in only — it's never chosen automatically, even if `OPENROUTER_API_KEY` is
+set, because of the cost/verification caveats below.
 
 ## One-time setup
 
 ### 1. LLM API key
 
-**Anthropic** (default): get a key from
-[console.anthropic.com](https://console.anthropic.com/settings/keys), add it as
-the `ANTHROPIC_API_KEY` secret.
-
-**OpenAI**: get a key from
-[platform.openai.com/api-keys](https://platform.openai.com/api-keys), add it as
-the `OPENAI_API_KEY` secret, and set the `LLM_PROVIDER` repo variable to
-`openai`. This path uses the Responses API's built-in `web_search` tool (model
-must support it — the default is `gpt-5.6`; check
+**OpenAI** (primary/default): get a key from
+[platform.openai.com/api-keys](https://platform.openai.com/api-keys), add it
+as the `OPENAI_API_KEY` secret. No `LLM_PROVIDER` variable needed — this is
+what the script picks automatically once this key is present. Uses the
+Responses API's built-in `web_search` tool (model must support it — the
+default is `gpt-5.6`; check
 [developers.openai.com/api/docs/guides/tools-web-search](https://developers.openai.com/api/docs/guides/tools-web-search)
 if that default has since changed).
 
-**OpenRouter**: get a key from
+**Anthropic** (automatic fallback): get a key from
+[console.anthropic.com](https://console.anthropic.com/settings/keys), add it
+as the `ANTHROPIC_API_KEY` secret. If `OPENAI_API_KEY` is absent, the script
+falls back to this automatically — no `LLM_PROVIDER` variable needed. Set
+`LLM_PROVIDER=anthropic` explicitly only if you want Anthropic used even when
+an OpenAI key is also present.
+
+**OpenRouter** (opt-in only, never auto-selected): get a key from
 [openrouter.ai/keys](https://openrouter.ai/keys), add it as the
 `OPENROUTER_API_KEY` secret, and set the `LLM_PROVIDER` repo variable to
-`openrouter`. Default model is `nvidia/nemotron-3-ultra-550b-a55b:free` —
+`openrouter` — this one won't be picked automatically even if the key is
+present. Default model is `nvidia/nemotron-3-ultra-550b-a55b:free` —
 token usage on this model is free, **but web search is not**: it's enabled via
 OpenRouter's "web" plugin, billed per search (roughly $0.005–$0.015 each
 depending on the backend engine OpenRouter routes to) regardless of whether
@@ -85,17 +99,19 @@ Secrets: **Settings → Secrets and variables → Actions → Secrets tab → Ne
 
 | Secret | Required | Value |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | if using Anthropic (default) | your Anthropic API key |
-| `OPENAI_API_KEY` | if using OpenAI | your OpenAI API key |
-| `OPENROUTER_API_KEY` | if using OpenRouter | your OpenRouter API key |
+| `OPENAI_API_KEY` | primary — set this | your OpenAI API key |
+| `ANTHROPIC_API_KEY` | fallback — set as a backstop | your Anthropic API key |
+| `OPENROUTER_API_KEY` | only if opting into OpenRouter | your OpenRouter API key |
 | `GMAIL_ADDRESS` | for email | the Gmail address to send from |
 | `GMAIL_APP_PASSWORD` | for email | the 16-character app password from step 2 |
 | `DIGEST_RECIPIENT` | no | recipient address; defaults to `GMAIL_ADDRESS` if unset |
 
-Variable (only needed to switch away from Anthropic): **Settings → Secrets and
-variables → Actions → Variables tab → New repository variable** — name
-`LLM_PROVIDER`, value `openai` or `openrouter`. Leave it unset to use the
-Anthropic default.
+Setting both `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` is the recommended
+setup — OpenAI is used normally, Anthropic only kicks in if the OpenAI key
+ever goes missing or gets revoked. `LLM_PROVIDER` variable: **Settings →
+Secrets and variables → Actions → Variables tab → New repository variable** —
+only needed to force a specific provider (`openai`, `anthropic`, or
+`openrouter`); leave unset for the auto-selection described above.
 
 No GitHub token needs adding — the workflow's built-in `GITHUB_TOKEN` already has
 push access to this repo via the `permissions: contents: write` block in the
@@ -112,8 +128,8 @@ file appeared in `digests/`.
 ```bash
 cd agent
 pip install -r requirements.txt
-export ANTHROPIC_API_KEY=...    # or LLM_PROVIDER=openai + OPENAI_API_KEY=...
-                                 # or LLM_PROVIDER=openrouter + OPENROUTER_API_KEY=...
+export OPENAI_API_KEY=...       # primary; or export ANTHROPIC_API_KEY=... as/for fallback
+                                 # or: export LLM_PROVIDER=openrouter; export OPENROUTER_API_KEY=...
 export GMAIL_ADDRESS=...        # optional
 export GMAIL_APP_PASSWORD=...   # optional
 python daily_pulse.py
