@@ -3,7 +3,12 @@ name: Daily Pulse
 on:
   schedule:
     - cron: "0 2 * * *" # 02:00 UTC daily
-  workflow_dispatch: {} # allows manual "Run workflow" from the Actions tab
+  workflow_dispatch:
+    inputs:
+      selftest:
+        description: "Self-test only: verify the API key works, don't generate/commit/email a digest"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -32,4 +37,5 @@ jobs:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           DIGEST_RECIPIENT: ${{ secrets.DIGEST_RECIPIENT }}
+          DAILY_PULSE_SELFTEST: ${{ github.event.inputs.selftest == 'true' && '1' || '' }}
         run: python agent/daily_pulse.py

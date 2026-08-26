@@ -257,6 +257,58 @@ def run_digest(
     return digest
 
 
+def selftest() -> int:
+    """Verify the resolved provider's API key actually works, with a single
+    cheap call (no web search, tiny max_tokens) — no digest is generated, no
+    file is written, nothing is committed or emailed. Triggered by
+    --selftest or DAILY_PULSE_SELFTEST=1, so this can be run against the
+    real repo at any time without touching digests/ or git history.
+    """
+    print(f"Self-test: provider={PROVIDER}, model={MODEL}")
+    probe = "Reply with exactly one word: OK"
+    try:
+        if PROVIDER == "anthropic":
+            import anthropic
+
+            client = anthropic.Anthropic()
+            response = client.messages.create(
+                model=MODEL,
+                max_tokens=10,
+                messages=[{"role": "user", "content": probe}],
+            )
+            text = "".join(
+                block.text for block in response.content if block.type == "text"
+            ).strip()
+        elif PROVIDER == "openai":
+            import openai
+
+            client = openai.OpenAI()
+            response = client.responses.create(model=MODEL, input=probe)
+            text = response.output_text.strip()
+        elif PROVIDER == "openrouter":
+            import openai
+
+            client = openai.OpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=os.environ["OPENROUTER_API_KEY"],
+            )
+            response = client.chat.completions.create(
+                model=MODEL,
+                messages=[{"role": "user", "content": probe}],
+                max_tokens=10,
+            )
+            text = (response.choices[0].message.content or "").strip()
+        else:
+            print(f"SELFTEST FAILED: unknown provider {PROVIDER!r}")
+            return 1
+    except Exception as exc:  # noqa: BLE001 — surface any auth/network error plainly
+        print(f"SELFTEST FAILED: {type(exc).__name__}: {exc}")
+        return 1
+
+    print(f"SELFTEST OK: model replied {text!r}")
+    return 0
+
+
 def parse_index_row(date_str: str, lookback: str, digest: str) -> str:
     pillars_with_items = []
     for pillar in PILLARS:
@@ -347,6 +399,9 @@ def send_email(date_str: str, digest: str) -> bool:
 
 
 def main() -> int:
+    if "--selftest" in sys.argv or os.environ.get("DAILY_PULSE_SELFTEST") == "1":
+        return selftest()
+
     today = datetime.now(timezone.utc)
     date_str = today.strftime("%Y-%m-%d")
 
