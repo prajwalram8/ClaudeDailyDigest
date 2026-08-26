@@ -140,13 +140,22 @@ your local git remote and credentials are set up for push access first.
 
 ## Relationship to the Claude Code Routine
 
-This repo also has a Claude Code scheduled Routine (`daily-pulse-run`) doing the
-same job from inside a Claude Code session, on the same 02:00 UTC schedule. With
-both active, whichever finishes first wins cleanly (this script checks whether
-today's file already exists and exits immediately if so) — but if they run
-close enough together, both could start before either has written the file,
-producing two different digests for the same day, a push race, or two emails.
-Don't leave both enabled long-term: run them in parallel for a few days to
-compare output quality, then disable one. Disabling the Routine is a
-`delete_trigger` call on `daily-pulse-run`; ask Claude to do it once you're
-ready, or remove it from the claude.ai Routines UI.
+This repo also has a Claude Code scheduled Routine (`daily-pulse-run`) that runs
+the same skill from inside a Claude Code session. It's a deliberate **fallback**,
+not a duplicate:
+
+- This Python agent runs first, via GitHub Actions at 02:00 UTC — the primary path.
+- The Routine fires 45 minutes later (02:45 UTC), specifically to give this agent
+  time to finish. Its first move (Step 0 in `SKILL.md`) is to check whether
+  today's `digests/YYYY-MM-DD.md` already exists — if it does, the Routine stops
+  immediately and does nothing else.
+- The Routine only does a real run — searching, writing, committing, emailing —
+  if today's file is still missing, which means this agent wasn't configured
+  (no API key secrets set), failed, or GitHub Actions itself was unavailable.
+
+So both stay enabled permanently by design — this agent doesn't need the Routine
+disabled, and shouldn't be, since it's the safety net for exactly the kind of
+failure a fully automated pipeline can silently have (an expired key, a rate
+limit, a GitHub Actions outage). If you ever do want to turn the fallback off
+entirely, that's a `delete_trigger` call on `daily-pulse-run`; ask Claude to do
+it, or remove it from the claude.ai Routines UI.

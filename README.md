@@ -13,13 +13,15 @@ genuinely new, material developments since the previous run.
   queries to use, the materiality bar, and the output format.
 - **`digests/`** — the persistent archive. One markdown file per run (`YYYY-MM-DD.md`), plus a
   running index in `digests/README.md`.
-- A daily scheduled trigger runs the skill automatically, pushes each day's file straight to
-  `main`, and emails the digest.
+- **`agent/`** — a standalone Python agent that runs `SKILL.md` via GitHub Actions at 02:00 UTC.
+  This is the **primary** way the digest gets produced. See `agent/README.md` for setup
+  (API key, email).
+- A Claude Code Routine runs the same skill 45 minutes later, as a **fallback**: its first move
+  is to check whether today's file already exists, and it does nothing further if so. It only
+  does a real run if the Python agent wasn't configured, failed, or GitHub Actions was
+  unavailable — see "Relationship to the Claude Code Routine" in `agent/README.md`.
 - **`.claude/skills/daily-pulse-feedback/SKILL.md`** + **`feedback/log.md`** — a self-improvement
   loop for missed items (see below).
-- **`agent/`** — a standalone Python version of the same skill, running on its own GitHub
-  Actions schedule instead of inside a Claude Code session. See `agent/README.md` for setup.
-  While both are enabled, only run one at a time long-term (see that README).
 
 ## Running it manually
 
