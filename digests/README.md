@@ -28,3 +28,4 @@ synthesis lives in the separate weekly digest, not here.
 | 2026-09-01 | 24h | Trade & economic, Geopolitical & security, Portfolio-specific | 5 |
 | 2026-09-02 | 24h | Maritime & shipping, Geopolitical & security | 5 |
 | 2026-09-03 | 24h | Geopolitical & security | 5 |
+| 2026-09-04 | 24h | Geopolitical & security | 5 |
