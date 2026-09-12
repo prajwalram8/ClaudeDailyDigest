@@ -36,3 +36,4 @@ synthesis lives in the separate weekly digest, not here.
 | 2026-09-09 | 24h | Maritime & shipping, Trade & economic, Industry & strategic moves | 5 |
 | 2026-09-10 | 24h | Maritime & shipping, Geopolitical & security | 5 |
 | 2026-09-11 | 24h | Maritime & shipping, Trade & economic | 5 |
+| 2026-09-12 | 24h | Gulf infrastructure, Geopolitical & security | 5 |
