@@ -46,3 +46,4 @@ synthesis lives in the separate weekly digest, not here.
 | 2026-09-19 | 24h | Maritime & shipping, Geopolitical & security | 5 |
 | 2026-09-20 | 24h | Maritime & shipping, Geopolitical & security | 5 |
 | 2026-09-21 | 72h (Monday) | Geopolitical & security | 5 |
+| 2026-09-22 | 24h | Geopolitical & security | 5 |
