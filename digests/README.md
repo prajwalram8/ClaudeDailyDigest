@@ -48,3 +48,4 @@ synthesis lives in the separate weekly digest, not here.
 | 2026-09-21 | 72h (Monday) | Geopolitical & security | 5 |
 | 2026-09-22 | 24h | Geopolitical & security | 5 |
 | 2026-09-23 | 24h | Maritime & shipping, Geopolitical & security | 5 |
+| 2026-09-24 | 24h | Maritime & shipping operations, Gulf regional infrastructure, Trade and economic developments, Geopolitical and security, Industry and strategic moves, South Asia connectivity and corridors, Portfolio-specific, UAE domestic free zone competitors | 8 |
