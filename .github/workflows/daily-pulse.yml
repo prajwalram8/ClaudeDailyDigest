@@ -1,8 +1,6 @@
 name: Daily Pulse
 
 on:
-  schedule:
-    - cron: "0 2 * * *" # 02:00 UTC daily
   workflow_dispatch:
     inputs:
       selftest:
