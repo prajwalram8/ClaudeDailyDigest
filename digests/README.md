@@ -85,3 +85,4 @@ synthesis lives in the separate weekly digest, not here.
 | 2026-10-30 | 24h | Maritime & shipping operations, Gulf regional infrastructure, Trade and economic developments, Geopolitical and security, Industry and strategic moves, South Asia connectivity and corridors, Portfolio-specific, UAE domestic free zone competitors | 12 |
 | 2026-10-31 | 24h | Maritime & shipping operations, Gulf regional infrastructure, Trade and economic developments, Geopolitical and security, Industry and strategic moves, South Asia connectivity and corridors, Portfolio-specific, UAE domestic free zone competitors | 12 |
 | 2026-11-01 | 24h | Maritime & shipping operations, Gulf regional infrastructure, Trade and economic developments, Geopolitical and security, Industry and strategic moves, South Asia connectivity and corridors, Portfolio-specific, UAE domestic free zone competitors | 12 |
+| 2026-11-02 | 72h | none — quiet day | 12 |
